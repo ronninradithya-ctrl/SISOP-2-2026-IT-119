@@ -46,6 +46,9 @@ soal_1/
     └── daftar_penunggak.txt  # Hasil filter warga berstatus "Belum Lunas"
 ```
 
+<img width="866" height="204" alt="Screenshot 2026-04-08 114527" src="https://github.com/user-attachments/assets/9439f3f8-b615-4cfe-90f2-334f352b6d19" />
+
+
 ---
 
 ## Langkah-Langkah Pembuatan di Ubuntu
@@ -70,16 +73,9 @@ nano buku_hutang.csv
 
 Isi file dengan format berikut (baris pertama adalah header):
 
-```
-Nama,Pesanan,Jumlah,Status
-Mat Jenin,Teh Tarik,3000,Belum Lunas
-Siti,Roti Canai,5000,Lunas
-Ah Tong,Nasi Lemak,7000,Belum Lunas
-Upin,Milo Ais,2000,Lunas
-Ipin,Kuih Cara,1500,Belum Lunas
-Mail,Char Kway Teow,8000,Belum Lunas
-Ehsan,Bandung,4000,Lunas
-```
+
+<img width="1257" height="228" alt="Screenshot 2026-04-08 114541" src="https://github.com/user-attachments/assets/02315052-33d4-4273-aea1-8d4832975290" />
+
 
 Simpan file: tekan `Ctrl+O` → `Enter` → `Ctrl+X` untuk keluar.
 
@@ -98,109 +94,65 @@ Berikut adalah **kode lengkap** program `kasir_muthu.c`:
 ```c
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-// Fungsi helper untuk menjalankan child process dan menunggu hasilnya
-// Mengembalikan exit status dari child process
-int run_child(char *argv[]) {
-    pid_t pid = fork();
-
-    if (pid < 0) {
-        // fork() gagal
-        perror("fork gagal");
-        exit(EXIT_FAILURE);
-    }
-
-    if (pid == 0) {
-        // Ini adalah Child Process
-        // execvp akan menggantikan proses ini dengan perintah yang diberikan
-        execvp(argv[0], argv);
-        // Jika execvp gagal (misal perintah tidak ditemukan), cetak error dan keluar
-        perror("execvp gagal");
-        exit(EXIT_FAILURE);
-    }
-
-    // Ini adalah Parent Process
-    // Tunggu child selesai dan ambil status keluarnya
-    int status;
-    waitpid(pid, &status, 0);
-
-    // Kembalikan exit code dari child (0 = sukses, non-zero = gagal)
+void cek_error(int status) {
     if (WIFEXITED(status)) {
-        return WEXITSTATUS(status);
+        if (WEXITSTATUS(status) != 0) {
+            printf("[ERROR] Aiyaa! Proses gagal, file atau folder tidak ditemukan.\n");
+            exit(1);
+        }
+    } else {
+        printf("[ERROR] Aiyaa! Proses gagal.\n");
+        exit(1);
     }
-    return -1; // Proses tidak berakhir normal
 }
 
 int main() {
-    int result;
+    pid_t pid;
+    int status;
 
-    printf("======================================\n");
-    printf("  Kasir Muthu - Pengaman Buku Hutang  \n");
-    printf("======================================\n\n");
-
-    // -------------------------------------------------------
-    // LANGKAH 1: Buat folder brankas_kedai
-    // -------------------------------------------------------
-    printf("[STEP 1] Upin memanggil Ipin untuk membuat folder brankas...\n");
-    char *cmd1[] = {"mkdir", "brankas_kedai", NULL};
-    result = run_child(cmd1);
-    if (result != 0) {
-        printf("[ERROR] Aiyaa! Proses gagal, file atau folder tidak ditemukan.\n");
-        exit(EXIT_FAILURE);
+    pid = fork();
+    if (pid == 0) {
+        execlp("mkdir", "mkdir", "-p", "brankas_kedai", NULL);
+        exit(1);
+    } else {
+        waitpid(pid, &status, 0);
+        cek_error(status);
     }
-    printf("[OK] Folder brankas_kedai berhasil dibuat!\n\n");
 
-    // -------------------------------------------------------
-    // LANGKAH 2: Salin buku_hutang.csv ke dalam brankas
-    // -------------------------------------------------------
-    printf("[STEP 2] Upin memanggil Ipin untuk menyalin file CSV...\n");
-    char *cmd2[] = {"cp", "buku_hutang.csv", "brankas_kedai/", NULL};
-    result = run_child(cmd2);
-    if (result != 0) {
-        printf("[ERROR] Aiyaa! Proses gagal, file atau folder tidak ditemukan.\n");
-        exit(EXIT_FAILURE);
+    pid = fork();
+    if (pid == 0) {
+        execlp("cp", "cp", "buku_hutang.csv", "brankas_kedai/", NULL);
+        exit(1);
+    } else {
+        waitpid(pid, &status, 0);
+        cek_error(status);
     }
-    printf("[OK] File buku_hutang.csv berhasil disalin ke brankas_kedai!\n\n");
 
-    // -------------------------------------------------------
-    // LANGKAH 3: Filter "Belum Lunas" ke daftar_penunggak.txt
-    // Menggunakan sh -c karena ada karakter redirection (>)
-    // yang tidak bisa langsung dipakai di exec tanpa shell
-    // -------------------------------------------------------
-    printf("[STEP 3] Upin memanggil Ipin untuk memfilter data penunggak...\n");
-    char *cmd3[] = {
-        "sh", "-c",
-        "grep 'Belum Lunas' brankas_kedai/buku_hutang.csv > brankas_kedai/daftar_penunggak.txt",
-        NULL
-    };
-    result = run_child(cmd3);
-    if (result != 0) {
-        printf("[ERROR] Aiyaa! Proses gagal, file atau folder tidak ditemukan.\n");
-        exit(EXIT_FAILURE);
+    pid = fork();
+    if (pid == 0) {
+        execlp("sh", "sh", "-c",
+               "grep 'Belum Lunas' brankas_kedai/buku_hutang.csv > brankas_kedai/daftar_penunggak.txt",
+               NULL);
+        exit(1);
+    } else {
+        waitpid(pid, &status, 0);
+        cek_error(status);
     }
-    printf("[OK] File daftar_penunggak.txt berhasil dibuat!\n\n");
 
-    // -------------------------------------------------------
-    // LANGKAH 4: Kompres brankas_kedai menjadi rahasia_muthu.zip
-    // -------------------------------------------------------
-    printf("[STEP 4] Upin memanggil Ipin untuk mengompres brankas...\n");
-    char *cmd4[] = {"zip", "-r", "rahasia_muthu.zip", "brankas_kedai", NULL};
-    result = run_child(cmd4);
-    if (result != 0) {
-        printf("[ERROR] Aiyaa! Proses gagal, file atau folder tidak ditemukan.\n");
-        exit(EXIT_FAILURE);
+    pid = fork();
+    if (pid == 0) {
+        execlp("zip", "zip", "-r", "rahasia_muthu.zip", "brankas_kedai", NULL);
+        exit(1);
+    } else {
+        waitpid(pid, &status, 0);
+        cek_error(status);
     }
-    printf("[OK] brankas_kedai berhasil dikompres menjadi rahasia_muthu.zip!\n\n");
 
-    // -------------------------------------------------------
-    // SEMUA LANGKAH SUKSES
-    // -------------------------------------------------------
-    printf("======================================\n");
     printf("[INFO] Fuhh, selamat! Buku hutang dan daftar penagihan berhasil diamankan.\n");
-    printf("======================================\n");
 
     return 0;
 }
@@ -234,27 +186,8 @@ Jalankan program yang telah dikompilasi:
 
 **Contoh output yang diharapkan:**
 
-```
-======================================
-  Kasir Muthu - Pengaman Buku Hutang  
-======================================
+<img width="939" height="118" alt="Screenshot 2026-04-08 111819" src="https://github.com/user-attachments/assets/dd75b33f-7196-4888-84f7-0461f2e0d8ad" />
 
-[STEP 1] Upin memanggil Ipin untuk membuat folder brankas...
-[OK] Folder brankas_kedai berhasil dibuat!
-
-[STEP 2] Upin memanggil Ipin untuk menyalin file CSV...
-[OK] File buku_hutang.csv berhasil disalin ke brankas_kedai!
-
-[STEP 3] Upin memanggil Ipin untuk memfilter data penunggak...
-[OK] File daftar_penunggak.txt berhasil dibuat!
-
-[STEP 4] Upin memanggil Ipin untuk mengompres brankas...
-[OK] brankas_kedai berhasil dikompres menjadi rahasia_muthu.zip!
-
-======================================
-[INFO] Fuhh, selamat! Buku hutang dan daftar penagihan berhasil diamankan.
-======================================
-```
 
 ---
 
@@ -337,27 +270,3 @@ Jika child mengembalikan nilai selain `0`, program langsung menghentikan eksekus
 Hal ini mencegah program melanjutkan ke langkah berikutnya ketika ada yang gagal di tengah jalan, misalnya jika file `buku_hutang.csv` tidak ditemukan.
 
 ---
-
-## Konsep Sistem Operasi yang Digunakan
-
-### `fork()`
-Fungsi ini membuat **salinan persis** dari proses yang sedang berjalan. Setelah `fork()` dipanggil, ada dua proses yang identik:
-- **Parent** mendapatkan nilai PID dari child (nilai > 0)
-- **Child** mendapatkan nilai `0`
-- Jika terjadi error, kedua proses mendapatkan nilai `-1`
-
-### `exec()` (keluarga fungsi)
-Fungsi ini **menggantikan** program yang sedang berjalan di dalam proses tersebut dengan program baru. Ada beberapa variannya:
-- `execvp(file, argv[])` — Menerima array argumen, mencari program di `PATH`
-- `execlp(file, arg0, arg1, ..., NULL)` — Menerima argumen satu per satu
-- Setelah `exec()` berhasil, kode setelahnya **tidak akan pernah dieksekusi** karena program sudah digantikan
-
-### `waitpid()`
-Fungsi ini membuat **parent process menunggu** hingga child process tertentu selesai. Ini adalah kunci dari **Sequential Process** — parent tidak akan melanjutkan ke langkah berikutnya sebelum child selesai.
-
-### Mengapa Tidak Boleh `system()`?
-Fungsi `system()` sebenarnya memanggil shell secara internal (`/bin/sh -c "perintah"`). Ia memiliki risiko keamanan berupa **shell injection** dan dianggap sebagai cara "malas" yang menyembunyikan detail proses. Dengan `fork()` + `exec()`, kita memiliki **kontrol penuh** atas proses yang dibuat.
-
----
-
-*README ini dibuat untuk mendokumentasikan tugas Sistem Operasi - Soal 1: Kasbon Warga Kampung Durian Runtuh.*
