@@ -184,7 +184,7 @@ Jalankan program yang telah dikompilasi:
 ./kasir_muthu
 ```
 
-**Contoh output yang diharapkan:**
+**Contoh output:**
 
 <img width="939" height="118" alt="Screenshot 2026-04-08 111819" src="https://github.com/user-attachments/assets/dd75b33f-7196-4888-84f7-0461f2e0d8ad" />
 
@@ -234,22 +234,6 @@ PARENT (Upin)
 | 3 | Child 3 | `sh -c "grep 'Belum Lunas' ... > ..."` | Filter data, pakai `sh -c` karena ada `>` |
 | 4 | Child 4 | `zip -r rahasia_muthu.zip brankas_kedai` | Mengompres seluruh isi brankas |
 
-### Mengapa Langkah 3 Menggunakan `sh -c`?
-
-Perintah `grep 'Belum Lunas' file.csv > output.txt` mengandung karakter **redirection** (`>`). Karakter ini adalah fitur dari **shell**, bukan dari program `grep` itu sendiri. 
-
-Karena kita tidak boleh menggunakan `system()`, dan `exec()` hanya bisa menjalankan satu program tanpa interpretasi shell, maka solusinya adalah **memanggil shell (`sh`) sebagai program, lalu memberikan perintah lengkap sebagai argumen `-c`**. Dengan begitu, shell-lah yang menginterpretasikan redirection tersebut, bukan program `grep` secara langsung.
-
-```c
-// Cara yang benar: panggil sh sebagai "perantara"
-char *cmd3[] = {
-    "sh", "-c",
-    "grep 'Belum Lunas' brankas_kedai/buku_hutang.csv > brankas_kedai/daftar_penunggak.txt",
-    NULL
-};
-execvp(cmd3[0], cmd3);
-```
-
 ### Mekanisme Error Handling
 
 Setiap kali Parent memanggil `waitpid()`, ia akan mendapatkan **exit status** dari child. Dalam Unix/Linux, program yang berhasil mengembalikan nilai `0`, sedangkan yang gagal mengembalikan nilai selain `0`.
@@ -270,3 +254,6 @@ Jika child mengembalikan nilai selain `0`, program langsung menghentikan eksekus
 Hal ini mencegah program melanjutkan ke langkah berikutnya ketika ada yang gagal di tengah jalan, misalnya jika file `buku_hutang.csv` tidak ditemukan.
 
 ---
+
+**#Soal 2**
+
